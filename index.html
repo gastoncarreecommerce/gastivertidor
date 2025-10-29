@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gastivertidor de Imágenes para CyberMonday</title>
+  <style>
+    :root { --bg:#0f1220; --card:#171a2b; --muted:#8c91a5; --text:#e8ecff; --accent:#6ae3ff; --ok:#64d27d; --warn:#ffd166; --err:#ff6b6b; }
+    *{box-sizing:border-box}
+    html, body{height:100%}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial; background:linear-gradient(180deg,#0a0d19,#0f1220); color:var(--text)}
+    .wrap{max-width:1100px; margin:24px auto; padding:0 16px}
+    .card{background:var(--card); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:18px}
+    h1{font-size:20px; margin:0 0 12px; letter-spacing:.2px}
+    .grid{display:grid; grid-template-columns:1fr; gap:14px}
+    @media(min-width:900px){.grid{grid-template-columns: 1.2fr .8fr}}
+    textarea{width:100%; min-height:200px; background:#0d1020; border:1px solid rgba(255,255,255,.08); color:var(--text); border-radius:12px; padding:12px; resize:vertical}
+    label{font-size:13px; color:var(--muted)}
+    input[type="text"], input[type="number"], input[type="url"], select {width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:#0d1020; color:var(--text)}
+    .row{display:grid; grid-template-columns: repeat(12, 1fr); gap:10px}
+    .row > .c6{grid-column: span 6}
+    .row > .c4{grid-column: span 4}
+    .row > .c3{grid-column: span 3}
+    .row > .c2{grid-column: span 2}
+    .row > .c12{grid-column: span 12}
+    .btn{appearance:none; border:0; background:var(--accent); color:#061018; padding:12px 14px; border-radius:12px; font-weight:700; cursor:pointer}
+    .btn:disabled{opacity:.5; cursor:not-allowed}
+    .btn.secondary{background:#2a2e42; color:var(--text); border:1px solid rgba(255,255,255,.08)}
+    .muted{color:var(--muted)}
+    .flex{display:flex; gap:10px; align-items:center}
+    .tag{font-size:12px; background:#0d1020; border:1px solid rgba(255,255,255,.08); padding:4px 8px; border-radius:999px; color:var(--muted)}
+    progress{width:100%; height:14px}
+    .log{height:220px; overflow:auto; background:#0d1020; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px}
+    .kbd{font-family:ui-monospace,monospace; font-size:12px; background:#0d1020; border:1px solid rgba(255,255,255,.12); padding:2px 6px; border-radius:6px}
+    .hint{font-size:12px; color:var(--muted)}
+    .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#0d1020; border:1px solid rgba(255,255,255,.08); font-size:12px}
+    .status{display:flex; flex-wrap:wrap; gap:8px}
+  </style>
+  <!-- JSZip for zipping files -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Gastivertidor de Imágenes para CyberMonday → <span class="tag">500×375</span> <span class="tag">JPG</span> <span class="tag">Crop centrado</span></h1>
+      <p class="muted">Pegá hasta 200 URLs de imágenes (<span class="kbd">.webp</span> recomendado). Se convertirán a <strong>JPEG</strong>, con <strong>recorte centrado</strong> para respetar exactamente 4:3 (<span class="kbd">500×375</span>), se renombrarán y se descargarán en un <strong>ZIP</strong>.</p>
+      <div class="grid">
+        <div>
+          <label for="urls">URLs de imágenes (una por línea)</label>
+          <textarea id="urls" placeholder="https://.../img1.webp\nhttps://.../img2.webp\n..."></textarea>
+          <div class="flex" style="justify-content:space-between; margin-top:8px">
+            <span class="hint">Consejo: si el servidor de origen no permite CORS, activá el proxy abajo.</span>
+            <button class="btn secondary" id="btnEjemplo" type="button">Cargar ejemplo</button>
+          </div>
+        </div>
+        <div>
+          <div class="row">
+            <div class="c6">
+              <label>Tamaño final</label>
+              <div class="flex">
+                <input type="number" id="w" value="500" min="1" style="width:120px">×
+                <input type="number" id="h" value="375" min="1" style="width:120px">
+                <span class="pill"><strong>Modo:</strong> Crop cover (centrado)</span>
+              </div>
+            </div>
+            <div class="c6">
+              <label>Calidad JPG</label>
+              <div class="flex">
+                <input type="range" id="quality" min="60" max="100" value="92" />
+                <span id="qVal" class="tag">92%</span>
+              </div>
+            </div>
+            <div class="c6">
+              <label>Prefijo de nombre</label>
+              <input id="prefix" type="text" value="imagen" placeholder="p.ej. producto"/>
+            </div>
+            <div class="c3">
+              <label>Índice inicial</label>
+              <input id="startIndex" type="number" value="1" min="0" />
+            </div>
+            <div class="c3">
+              <label>Ceros (padding)</label>
+              <input id="pad" type="number" value="3" min="1" />
+            </div>
+            <div class="c12">
+              <label class="flex" style="gap:8px; align-items:center">
+                <input type="checkbox" id="keepBase"> Incluir parte del nombre original (<span class="hint">prefijo + base + índice</span>)
+              </label>
+            </div>
+            <div class="c12" style="margin-top:4px"></div>
+            <div class="c12">
+              <label class="flex" style="gap:8px; align-items:center">
+                <input type="checkbox" id="useProxy"> Usar proxy CORS (experimental)
+              </label>
+              <input id="proxy" type="url" placeholder="https://tu-proxy.example.com/?url=" />
+              <span class="hint">Si las imágenes son externas y no tienen cabeceras CORS, el canvas se bloquea. Solución ideal: servir tus imágenes con <span class="kbd">Access-Control-Allow-Origin: *</span> o usar un proxy propio (Cloudflare Worker).</span>
+            </div>
+            <div class="c12" style="margin-top:10px">
+              <button id="go" class="btn">Procesar y crear ZIP</button>
+              <button id="cancel" class="btn secondary" disabled>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="row">
+        <div class="c12"><label>Progreso</label></div>
+        <div class="c12"><progress id="prog" value="0" max="100"></progress></div>
+        <div class="c12 status" id="status"></div>
+        <div class="c12"><div id="log" class="log" aria-live="polite"></div></div>
+        <div class="c12" style="display:flex; gap:10px; margin-top:10px">
+          <a id="downloadZip" class="btn secondary" style="display:none" download>Descargar ZIP</a>
+          <span id="summary" class="muted"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const el = (id)=>document.getElementById(id);
+  const urlsTA = el('urls');
+  const wInp = el('w');
+  const hInp = el('h');
+  const qRange = el('quality');
+  const qVal = el('qVal');
+  const prefix = el('prefix');
+  const startIndex = el('startIndex');
+  const pad = el('pad');
+  const keepBase = el('keepBase');
+  const useProxy = el('useProxy');
+  const proxy = el('proxy');
+  const go = el('go');
+  const cancelBtn = el('cancel');
+  const prog = el('prog');
+  const status = el('status');
+  const log = el('log');
+  const download = el('downloadZip');
+  const summary = el('summary');
+  const btnEjemplo = el('btnEjemplo');
+
+  let abort = false;
+  qRange.addEventListener('input', ()=>{ qVal.textContent = qRange.value+"%"; });
+
+  btnEjemplo.addEventListener('click', ()=>{
+    urlsTA.value = [
+      'https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d',
+      'https://images.unsplash.com/photo-1517336714731-489689fd1ca8',
+      'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e'
+    ].join('\n');
+  });
+
+  function addLog(msg, type='info'){
+    const map = {info:'', ok:'✅ ', warn:'⚠️ ', err:'⛔ '};
+    log.textContent += map[type] + msg + '\n';
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setStatus(done, total, okCount, errCount){
+    prog.max = total || 100; prog.value = done;
+    status.innerHTML = '';
+    const pills = [
+      ['Procesadas', done],
+      ['Éxitos', okCount],
+      ['Errores', errCount],
+      ['Restantes', Math.max(0, (total-done))]
+    ];
+    pills.forEach(([k,v])=>{
+      const span = document.createElement('span');
+      span.className='pill';
+      span.textContent = `${k}: ${v}`;
+      status.appendChild(span);
+    })
+  }
+
+  function sanitizeBase(u){
+    try{ const p=new URL(u); const b=p.pathname.split('/').pop()||'img'; return b.replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9_-]+/g,'-').slice(0,60)||'img'; }
+    catch{ return 'img'; }
+  }
+
+  function buildName(i, base){
+    const idx = String(i).padStart(parseInt(pad.value||'3',10), '0');
+    const pref = (prefix.value||'imagen').trim();
+    const middle = keepBase.checked ? ('-'+(base||'img')) : '';
+    return `${pref}${middle}-${idx}.jpg`;
+  }
+
+  async function fetchAsImage(url){
+    const finalURL = (useProxy.checked && proxy.value) ? (proxy.value + encodeURIComponent(url)) : url;
+    const res = await fetch(finalURL, {mode: useProxy.checked? 'cors' : 'cors', credentials:'omit'});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    // Convertir blob a ImageBitmap si existe, sino a HTMLImageElement
+    if ('createImageBitmap' in window){
+      return await createImageBitmap(blob);
+    } else {
+      return await new Promise((resolve,reject)=>{
+        const img = new Image();
+        img.onload=()=>resolve(img);
+        img.onerror=()=>reject(new Error('No se pudo cargar la imagen'));
+        img.crossOrigin = 'anonymous';
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+  }
+
+  function cropDrawToCanvas(img, tw, th, bg='#ffffff'){
+    const canvas = ('OffscreenCanvas' in window) ? new OffscreenCanvas(tw, th) : document.createElement('canvas');
+    canvas.width = tw; canvas.height = th;
+    const ctx = canvas.getContext('2d');
+    // Fondo blanco (por si el origen tenía transparencia al convertir a JPG)
+    ctx.fillStyle = bg; ctx.fillRect(0,0,tw,th);
+
+    const sw = (img.width || img.bitmapWidth); 
+    const sh = (img.height || img.bitmapHeight);
+
+    const scale = Math.max(tw / sw, th / sh); // cover
+    const dw = Math.round(sw * scale);
+    const dh = Math.round(sh * scale);
+    // calcular fuente a recortar
+    const srcW = Math.round(tw / scale);
+    const srcH = Math.round(th / scale);
+    const sx = Math.max(0, Math.round((sw - srcW) / 2));
+    const sy = Math.max(0, Math.round((sh - srcH) / 2));
+
+    // drawImage con recorte origen (sx,sy,srcW,srcH) -> destino (0,0,tw,th)
+    if (img instanceof ImageBitmap) {
+      ctx.drawImage(img, sx, sy, srcW, srcH, 0, 0, tw, th);
+    } else {
+      ctx.drawImage(img, sx, sy, srcW, srcH, 0, 0, tw, th);
+    }
+    return canvas;
+  }
+
+  async function canvasToJpegBlob(canvas, quality){
+    quality = Math.max(0.6, Math.min(1, (quality||92)/100));
+    if (canvas.convertToBlob){
+      return await canvas.convertToBlob({type:'image/jpeg', quality});
+    }
+    return await new Promise((resolve)=>{
+      const dataURL = canvas.toDataURL('image/jpeg', quality);
+      const bin = atob(dataURL.split(',')[1]);
+      const len = bin.length;
+      const u8 = new Uint8Array(len);
+      for (let i=0;i<len;i++) u8[i]=bin.charCodeAt(i);
+      resolve(new Blob([u8], {type:'image/jpeg'}));
+    });
+  }
+
+  function limitConcurrency(items, limit, worker){
+    let i=0, running=0; const results = [];
+    return new Promise((resolve)=>{
+      const next = ()=>{
+        if (abort){ resolve(results); return; }
+        while (running < limit && i < items.length){
+          const idx = i++; running++;
+          worker(items[idx], idx).then((res)=>{ results[idx]=res; }).catch((e)=>{ results[idx]={error:e}; }).finally(()=>{ running--; next(); });
+        }
+        if (i>=items.length && running===0) resolve(results);
+      };
+      next();
+    });
+  }
+
+  async function run(){
+    abort = false; download.style.display='none'; summary.textContent=''; log.textContent='';
+    let list = urlsTA.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const max = 200;
+    if (list.length===0){ addLog('Pegá al menos 1 URL.', 'warn'); return; }
+    if (list.length>max){ addLog(`Se limitarán a ${max} URLs (de ${list.length}).`, 'warn'); list = list.slice(0,max); }
+
+    const tw = parseInt(wInp.value||'500',10);
+    const th = parseInt(hInp.value||'375',10);
+    const quality = parseInt(qRange.value||'92',10);
+
+    addLog(`Iniciando: ${list.length} imágenes → ${tw}×${th} JPG @${quality}% (crop centrado)`, 'info');
+
+    go.disabled = true; cancelBtn.disabled=false;
+    let done=0, ok=0, err=0;
+    setStatus(0, list.length, 0, 0);
+
+    const zip = new JSZip();
+    const start = parseInt(startIndex.value||'1',10);
+
+    await limitConcurrency(list, 8, async (url, idx)=>{
+      if (abort) return;
+      const base = sanitizeBase(url);
+      const name = buildName(start + idx, base);
+      try{
+        addLog(`→ [${idx+1}] Descargando ${url}`);
+        const img = await fetchAsImage(url);
+        const canvas = cropDrawToCanvas(img, tw, th, '#ffffff');
+        const blob = await canvasToJpegBlob(canvas, quality);
+        zip.file(name, blob);
+        ok++;
+        addLog(`✔ Procesada: ${name}`, 'ok');
+      }catch(e){
+        err++;
+        addLog(`✖ Error con ${url}: ${e.message}`, 'err');
+      }finally{
+        done++; setStatus(done, list.length, ok, err);
+      }
+    });
+
+    if (abort){ addLog('Proceso cancelado por el usuario.', 'warn'); go.disabled=false; cancelBtn.disabled=true; return; }
+
+    addLog('Empaquetando ZIP...');
+    const out = await zip.generateAsync({type:'blob'});
+    const blobURL = URL.createObjectURL(out);
+    download.href = blobURL;
+    download.download = `${(prefix.value||'imagenes')}-${tw}x${th}-gastivertidor.zip`;
+    download.style.display='inline-flex';
+    summary.textContent = `Listo: ${ok} OK, ${err} errores.`;
+    addLog('ZIP listo para descargar ✅', 'ok');
+    go.disabled=false; cancelBtn.disabled=true;
+  }
+
+  go.addEventListener('click', run);
+  cancelBtn.addEventListener('click', ()=>{ abort = true; cancelBtn.disabled=true; });
+})();
+</script>
+</body>
+</html>
