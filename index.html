@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gastivertidor de Imágenes para CyberMonday</title>
+  <meta name="description" content="Convierte imágenes por URL o Excel/CSV a JPG 500×375 con recorte centrado, renombralas por SKU y descargá todo en un ZIP." />
   <style>
     :root { --bg:#0f1220; --card:#171a2b; --muted:#8c91a5; --text:#e8ecff; --accent:#6ae3ff; --ok:#64d27d; --warn:#ffd166; --err:#ff6b6b; }
     *{box-sizing:border-box}
@@ -13,7 +14,7 @@
     .card{background:var(--card); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:18px}
     h1{font-size:20px; margin:0 0 12px; letter-spacing:.2px}
     .grid{display:grid; grid-template-columns:1fr; gap:14px}
-    @media(min-width:900px){.grid{grid-template-columns: 1.2fr .8fr}}
+    @media(min-width:980px){.grid{grid-template-columns: 1.2fr .8fr}}
     textarea{width:100%; min-height:200px; background:#0d1020; border:1px solid rgba(255,255,255,.08); color:var(--text); border-radius:12px; padding:12px; resize:vertical}
     label{font-size:13px; color:var(--muted)}
     input[type="text"], input[type="number"], input[type="url"], select {width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:#0d1020; color:var(--text)}
@@ -35,24 +36,63 @@
     .hint{font-size:12px; color:var(--muted)}
     .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#0d1020; border:1px solid rgba(255,255,255,.08); font-size:12px}
     .status{display:flex; flex-wrap:wrap; gap:8px}
+    .seg{display:flex; gap:8px; flex-wrap:wrap}
+    .seg button{background:#0d1020; border:1px solid rgba(255,255,255,.12); color:var(--muted); padding:8px 10px; border-radius:10px; cursor:pointer}
+    .seg button.active{color:#061018; background:var(--accent); border-color:transparent; font-weight:700}
   </style>
-  <!-- JSZip for zipping files -->
+  <!-- Librerías -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1>Gastivertidor de Imágenes para CyberMonday → <span class="tag">500×375</span> <span class="tag">JPG</span> <span class="tag">Crop centrado</span></h1>
-      <p class="muted">Pegá hasta 200 URLs de imágenes (<span class="kbd">.webp</span> recomendado). Se convertirán a <strong>JPEG</strong>, con <strong>recorte centrado</strong> para respetar exactamente 4:3 (<span class="kbd">500×375</span>), se renombrarán y se descargarán en un <strong>ZIP</strong>.</p>
-      <div class="grid">
+      <p class="muted">Pegá URLs o subí un <strong>Excel/CSV</strong> con columnas <strong>URL</strong> y <strong>SKU</strong>. Se convierte a <strong>JPEG</strong> <span class="kbd">500×375</span> con recorte centrado, se renombra y se descarga en un <strong>ZIP</strong>.</p>
+
+      <div class="seg" role="tablist" aria-label="modo de entrada">
+        <button id="tabUrls" class="active" type="button">Pegar URLs</button>
+        <button id="tabExcel" type="button">Subir Excel/CSV</button>
+      </div>
+
+      <div class="grid" style="margin-top:10px">
+        <!-- Columna izquierda -->
         <div>
-          <label for="urls">URLs de imágenes (una por línea)</label>
-          <textarea id="urls" placeholder="https://.../img1.webp\nhttps://.../img2.webp\n..."></textarea>
-          <div class="flex" style="justify-content:space-between; margin-top:8px">
-            <span class="hint">Consejo: si el servidor de origen no permite CORS, activá el proxy abajo.</span>
-            <button class="btn secondary" id="btnEjemplo" type="button">Cargar ejemplo</button>
+          <div id="paneUrls">
+            <label for="urls">URLs de imágenes (una por línea)</label>
+            <textarea id="urls" placeholder="https://.../img1.webp
+https://.../img2.webp
+..."></textarea>
+            <div class="flex" style="justify-content:space-between; margin-top:8px">
+              <span class="hint">Si el servidor de origen no permite CORS, activá el proxy abajo.</span>
+              <button class="btn secondary" id="btnEjemplo" type="button">Cargar ejemplo</button>
+            </div>
+          </div>
+
+          <div id="paneExcel" style="display:none; margin-top:14px">
+            <label for="excel">Archivo Excel/CSV (1ra fila = encabezados)</label>
+            <input id="excel" type="file" accept=".xlsx,.xls,.csv" />
+            <div class="row" style="margin-top:10px">
+              <div class="c6">
+                <label>Columna: URL de imagen</label>
+                <select id="colUrl"><option value="">(seleccionar)</option></select>
+              </div>
+              <div class="c6">
+                <label>Columna: SKU</label>
+                <select id="colSku"><option value="">(seleccionar)</option></select>
+              </div>
+              <div class="c12" style="display:flex; gap:10px; align-items:center">
+                <button id="btnPreviewExcel" class="btn secondary" type="button" disabled>Previsualizar 5 filas</button>
+                <span id="excelInfo" class="hint"></span>
+              </div>
+              <div class="c12">
+                <div id="excelPreview" class="log" style="height:140px; display:none"></div>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- Columna derecha: opciones -->
         <div>
           <div class="row">
             <div class="c6">
@@ -70,30 +110,42 @@
                 <span id="qVal" class="tag">92%</span>
               </div>
             </div>
-            <div class="c6">
-              <label>Prefijo de nombre</label>
-              <input id="prefix" type="text" value="imagen" placeholder="p.ej. producto"/>
-            </div>
-            <div class="c3">
-              <label>Índice inicial</label>
-              <input id="startIndex" type="number" value="1" min="0" />
-            </div>
-            <div class="c3">
-              <label>Ceros (padding)</label>
-              <input id="pad" type="number" value="3" min="1" />
-            </div>
+
             <div class="c12">
               <label class="flex" style="gap:8px; align-items:center">
-                <input type="checkbox" id="keepBase"> Incluir parte del nombre original (<span class="hint">prefijo + base + índice</span>)
+                <input type="checkbox" id="useSkuNames"> Usar nombre exacto del SKU (Excel) → <span class="hint">genera <span class="kbd">{SKU}.jpg</span> únicos</span>
               </label>
             </div>
+
+            <div id="renameBlock" class="c12">
+              <div class="row">
+                <div class="c6">
+                  <label>Prefijo de nombre <span class="hint">(modo URLs)</span></label>
+                  <input id="prefix" type="text" value="imagen" placeholder="p.ej. producto"/>
+                </div>
+                <div class="c3">
+                  <label>Índice inicial</label>
+                  <input id="startIndex" type="number" value="1" min="0" />
+                </div>
+                <div class="c3">
+                  <label>Ceros (padding)</label>
+                  <input id="pad" type="number" value="3" min="1" />
+                </div>
+                <div class="c12">
+                  <label class="flex" style="gap:8px; align-items:center">
+                    <input type="checkbox" id="keepBase"> Incluir parte del nombre original (prefijo + base + índice)
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div class="c12" style="margin-top:4px"></div>
             <div class="c12">
               <label class="flex" style="gap:8px; align-items:center">
                 <input type="checkbox" id="useProxy"> Usar proxy CORS (experimental)
               </label>
               <input id="proxy" type="url" placeholder="https://tu-proxy.example.com/?url=" />
-              <span class="hint">Si las imágenes son externas y no tienen cabeceras CORS, el canvas se bloquea. Solución ideal: servir tus imágenes con <span class="kbd">Access-Control-Allow-Origin: *</span> o usar un proxy propio (Cloudflare Worker).</span>
+              <span class="hint">Si las imágenes externas no tienen CORS, el canvas se bloquea. Ideal: <span class="kbd">Access-Control-Allow-Origin: *</span> o un proxy propio (Cloudflare Worker).</span>
             </div>
             <div class="c12" style="margin-top:10px">
               <button id="go" class="btn">Procesar y crear ZIP</button>
@@ -120,41 +172,75 @@
 
 <script>
 (function(){
-  const el = (id)=>document.getElementById(id);
-  const urlsTA = el('urls');
-  const wInp = el('w');
-  const hInp = el('h');
-  const qRange = el('quality');
-  const qVal = el('qVal');
-  const prefix = el('prefix');
-  const startIndex = el('startIndex');
-  const pad = el('pad');
-  const keepBase = el('keepBase');
-  const useProxy = el('useProxy');
-  const proxy = el('proxy');
-  const go = el('go');
-  const cancelBtn = el('cancel');
-  const prog = el('prog');
-  const status = el('status');
-  const log = el('log');
-  const download = el('downloadZip');
-  const summary = el('summary');
-  const btnEjemplo = el('btnEjemplo');
+  const $ = (id)=>document.getElementById(id);
+  // Tabs
+  const tabUrls = $('tabUrls');
+  const tabExcel = $('tabExcel');
+  const paneUrls = $('paneUrls');
+  const paneExcel = $('paneExcel');
+
+  // URL mode
+  const urlsTA = $('urls');
+  const btnEjemplo = $('btnEjemplo');
+
+  // Excel mode
+  const excelInput = $('excel');
+  const colUrl = $('colUrl');
+  const colSku = $('colSku');
+  const btnPreviewExcel = $('btnPreviewExcel');
+  const excelPreview = $('excelPreview');
+  const excelInfo = $('excelInfo');
+  let excelRows = []; // array de objetos (por encabezados)
+
+  // Common controls
+  const wInp = $('w');
+  const hInp = $('h');
+  const qRange = $('quality');
+  const qVal = $('qVal');
+  const useSkuNames = $('useSkuNames');
+  const renameBlock = $('renameBlock');
+  const prefix = $('prefix');
+  const startIndex = $('startIndex');
+  const pad = $('pad');
+  const keepBase = $('keepBase');
+  const useProxy = $('useProxy');
+  const proxy = $('proxy');
+  const go = $('go');
+  const cancelBtn = $('cancel');
+  const prog = $('prog');
+  const status = $('status');
+  const log = $('log');
+  const download = $('downloadZip');
+  const summary = $('summary');
 
   let abort = false;
-  qRange.addEventListener('input', ()=>{ qVal.textContent = qRange.value+"%"; });
 
-  btnEjemplo.addEventListener('click', ()=>{
+  // UI handlers
+  qRange.addEventListener('input', ()=>{ qVal.textContent = qRange.value+"%"; });
+  btnEjemplo?.addEventListener('click', ()=>{
     urlsTA.value = [
       'https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d',
       'https://images.unsplash.com/photo-1517336714731-489689fd1ca8',
       'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e'
-    ].join('\n');
+    ].join('\\n');
+  });
+
+  tabUrls.addEventListener('click', ()=>{
+    tabUrls.classList.add('active'); tabExcel.classList.remove('active');
+    paneUrls.style.display='block'; paneExcel.style.display='none';
+  });
+  tabExcel.addEventListener('click', ()=>{
+    tabExcel.classList.add('active'); tabUrls.classList.remove('active');
+    paneUrls.style.display='none'; paneExcel.style.display='block';
+  });
+
+  useSkuNames.addEventListener('change', ()=>{
+    renameBlock.style.display = useSkuNames.checked ? 'none' : 'block';
   });
 
   function addLog(msg, type='info'){
     const map = {info:'', ok:'✅ ', warn:'⚠️ ', err:'⛔ '};
-    log.textContent += map[type] + msg + '\n';
+    log.textContent += map[type] + msg + '\\n';
     log.scrollTop = log.scrollHeight;
   }
 
@@ -176,8 +262,12 @@
   }
 
   function sanitizeBase(u){
-    try{ const p=new URL(u); const b=p.pathname.split('/').pop()||'img'; return b.replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9_-]+/g,'-').slice(0,60)||'img'; }
+    try{ const p=new URL(u); const b=p.pathname.split('/').pop()||'img'; return b.replace(/\\.[^.]+$/,'').replace(/[^a-zA-Z0-9_-]+/g,'-').slice(0,60)||'img'; }
     catch{ return 'img'; }
+  }
+
+  function sanitizeSku(s){
+    return String(s||'').trim().replace(/\\s+/g,'-').replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'sku';
   }
 
   function buildName(i, base){
@@ -187,12 +277,23 @@
     return `${pref}${middle}-${idx}.jpg`;
   }
 
+  function buildUniqueNamer(){
+    const seen = new Map();
+    return (raw)=>{
+      const base = raw.replace(/\\.[^.]+$/, '');
+      let name = base;
+      let k = 1;
+      while(seen.has(name)) { k++; name = `${base}-${k}` }
+      seen.set(name, true);
+      return name + '.jpg';
+    }
+  }
+
   async function fetchAsImage(url){
     const finalURL = (useProxy.checked && proxy.value) ? (proxy.value + encodeURIComponent(url)) : url;
     const res = await fetch(finalURL, {mode: useProxy.checked? 'cors' : 'cors', credentials:'omit'});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const blob = await res.blob();
-    // Convertir blob a ImageBitmap si existe, sino a HTMLImageElement
     if ('createImageBitmap' in window){
       return await createImageBitmap(blob);
     } else {
@@ -210,22 +311,15 @@
     const canvas = ('OffscreenCanvas' in window) ? new OffscreenCanvas(tw, th) : document.createElement('canvas');
     canvas.width = tw; canvas.height = th;
     const ctx = canvas.getContext('2d');
-    // Fondo blanco (por si el origen tenía transparencia al convertir a JPG)
     ctx.fillStyle = bg; ctx.fillRect(0,0,tw,th);
 
     const sw = (img.width || img.bitmapWidth); 
     const sh = (img.height || img.bitmapHeight);
-
     const scale = Math.max(tw / sw, th / sh); // cover
-    const dw = Math.round(sw * scale);
-    const dh = Math.round(sh * scale);
-    // calcular fuente a recortar
     const srcW = Math.round(tw / scale);
     const srcH = Math.round(th / scale);
     const sx = Math.max(0, Math.round((sw - srcW) / 2));
     const sy = Math.max(0, Math.round((sh - srcH) / 2));
-
-    // drawImage con recorte origen (sx,sy,srcW,srcH) -> destino (0,0,tw,th)
     if (img instanceof ImageBitmap) {
       ctx.drawImage(img, sx, sy, srcW, srcH, 0, 0, tw, th);
     } else {
@@ -264,30 +358,108 @@
     });
   }
 
+  function headersFromSheet(sheet){
+    const range = XLSX.utils.decode_range(sheet['!ref']);
+    const firstRow = [];
+    for(let C = range.s.c; C <= range.e.c; ++C){
+      const cell = sheet[XLSX.utils.encode_cell({r: range.s.r, c: C})];
+      firstRow.push(cell ? String(cell.v) : `Col${C+1}`);
+    }
+    return firstRow;
+  }
+
+  function fillSelectOptions(headers){
+    [colUrl, colSku].forEach(sel=>{ sel.innerHTML = '<option value=\"\">(seleccionar)</option>'; });
+    headers.forEach(h=>{
+      const opt1 = document.createElement('option'); opt1.value=h; opt1.textContent=h; colUrl.appendChild(opt1);
+      const opt2 = document.createElement('option'); opt2.value=h; opt2.textContent=h; colSku.appendChild(opt2);
+    });
+  }
+
+  function previewRows(rows, urlKey, skuKey){
+    const take = rows.slice(0,5);
+    const lines = take.map((r,i)=>`${i+1}. URL=${r[urlKey]} | SKU=${r[skuKey]}`).join('\\n');
+    excelPreview.textContent = lines || '(sin datos)';
+    excelPreview.style.display = 'block';
+  }
+
+  excelInput.addEventListener('change', async (e)=>{
+    excelRows = []; colUrl.innerHTML='<option value=\"\">(seleccionar)</option>'; colSku.innerHTML='<option value=\"\">(seleccionar)</option>';
+    excelPreview.style.display='none'; excelInfo.textContent=''; btnPreviewExcel.disabled=true;
+    const file = e.target.files[0]; if(!file) return;
+    try{
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const headers = headersFromSheet(sheet);
+      fillSelectOptions(headers);
+      excelRows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+      excelInfo.textContent = `Filas: ${excelRows.length} | Columnas: ${headers.length}`;
+      btnPreviewExcel.disabled = false;
+      // Autoselect heurístico
+      const pick = (needle)=> headers.find(h=>h.toLowerCase().includes(needle));
+      colUrl.value = pick('url') || pick('link') || headers[0] || '';
+      colSku.value = pick('sku') || pick('id') || headers[1] || '';
+    }catch(err){
+      excelInfo.textContent = `Error leyendo archivo: ${err.message}`;
+    }
+  });
+
+  btnPreviewExcel.addEventListener('click', ()=>{
+    if(!excelRows.length) return;
+    const u = colUrl.value, s = colSku.value;
+    if(!u || !s){ excelInfo.textContent = 'Elegí las columnas de URL y SKU.'; return; }
+    previewRows(excelRows, u, s);
+  });
+
   async function run(){
     abort = false; download.style.display='none'; summary.textContent=''; log.textContent='';
-    let list = urlsTA.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const max = 200;
-    if (list.length===0){ addLog('Pegá al menos 1 URL.', 'warn'); return; }
-    if (list.length>max){ addLog(`Se limitarán a ${max} URLs (de ${list.length}).`, 'warn'); list = list.slice(0,max); }
-
     const tw = parseInt(wInp.value||'500',10);
     const th = parseInt(hInp.value||'375',10);
     const quality = parseInt(qRange.value||'92',10);
 
-    addLog(`Iniciando: ${list.length} imágenes → ${tw}×${th} JPG @${quality}% (crop centrado)`, 'info');
+    // Construir items a procesar (máx 200)
+    const max = 200;
+    let items = [];
+
+    if (paneExcel.style.display === 'block' && excelRows.length){
+      const uKey = colUrl.value; const sKey = colSku.value;
+      if(!uKey || !sKey){ addLog('Elegí columnas de URL y SKU para Excel.', 'warn'); return; }
+      const unique = (()=>{
+        const seen = new Set();
+        return (sku)=>{
+          let base = sanitizeSku(sku) || 'sku';
+          let name = base, k=1;
+          while(seen.has(name)){ k++; name = base+'-'+k; }
+          seen.add(name);
+          return name + '.jpg';
+        };
+      })();
+      items = excelRows.map(r=>({ url: String(r[uKey]||'').trim(), name: unique(r[sKey]) }))
+                       .filter(o=>o.url);
+      if(!items.length){ addLog('No hay URLs válidas en el Excel.', 'warn'); return; }
+      if(items.length>max){ addLog(`Se limitarán a ${max} filas (de ${items.length}).`, 'warn'); items = items.slice(0,max); }
+      useSkuNames.checked = true; renameBlock.style.display='none';
+      addLog(`Modo Excel: ${items.length} filas con SKU → nombres por SKU únicos.`);
+    } else {
+      // Modo URLs
+      let list = urlsTA.value.split(/\\r?\\n/).map(s=>s.trim()).filter(Boolean);
+      if (list.length===0){ addLog('Pegá al menos 1 URL.', 'warn'); return; }
+      if (list.length>max){ addLog(`Se limitarán a ${max} URLs (de ${list.length}).`, 'warn'); list = list.slice(0,max); }
+      const start = parseInt(startIndex.value||'1',10);
+      items = list.map((u, i)=>({ url: u, name: buildName(start + i, sanitizeBase(u)) }));
+      addLog(`Modo URLs: ${items.length} imágenes → ${tw}×${th} JPG @${quality}% (crop centrado)`);
+    }
 
     go.disabled = true; cancelBtn.disabled=false;
     let done=0, ok=0, err=0;
-    setStatus(0, list.length, 0, 0);
+    setStatus(0, items.length, 0, 0);
 
     const zip = new JSZip();
-    const start = parseInt(startIndex.value||'1',10);
 
-    await limitConcurrency(list, 8, async (url, idx)=>{
+    await limitConcurrency(items, 8, async (item, idx)=>{
       if (abort) return;
-      const base = sanitizeBase(url);
-      const name = buildName(start + idx, base);
+      const {url, name} = item;
       try{
         addLog(`→ [${idx+1}] Descargando ${url}`);
         const img = await fetchAsImage(url);
@@ -300,7 +472,7 @@
         err++;
         addLog(`✖ Error con ${url}: ${e.message}`, 'err');
       }finally{
-        done++; setStatus(done, list.length, ok, err);
+        done++; setStatus(done, items.length, ok, err);
       }
     });
 
@@ -310,7 +482,8 @@
     const out = await zip.generateAsync({type:'blob'});
     const blobURL = URL.createObjectURL(out);
     download.href = blobURL;
-    download.download = `${(prefix.value||'imagenes')}-${tw}x${th}-gastivertidor.zip`;
+    const baseZip = (paneExcel.style.display==='block' && excelRows.length) ? 'gastivertidor-sku' : (prefix.value||'gastivertidor');
+    download.download = `${baseZip}-${tw}x${th}.zip`;
     download.style.display='inline-flex';
     summary.textContent = `Listo: ${ok} OK, ${err} errores.`;
     addLog('ZIP listo para descargar ✅', 'ok');
