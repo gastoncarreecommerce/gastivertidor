@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Gastivertidor Pro - Direct Save</title>
+<title>Gastivertidor Pro - Fix Direct Save</title>
 <style>
   :root { --bg:#0f1220; --card:#171a2b; --muted:#8c91a5; --text:#e8ecff; --accent:#6ae3ff; }
   *{box-sizing:border-box}
@@ -25,13 +25,12 @@
   .log{height:180px; overflow:auto; background:#0d1020; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px; font-family:monospace; font-size:11px; margin-top:10px}
   .drop-zone{border:2px dashed rgba(255,255,255,0.1); border-radius:12px; padding:40px; text-align:center; cursor:pointer}
   .pill{background:rgba(106, 227, 255, 0.1); color:var(--accent); padding:2px 8px; border-radius:4px; font-size:11px}
-  .hidden{display:none}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Gastivertidor <span class="pill">Direct Folder Save</span></h1>
+    <h1>Gastivertidor <span class="pill">Auto-Fix Edition</span></h1>
     
     <div class="seg">
       <button id="tabFiles" class="active">Subir PNGs</button>
@@ -41,13 +40,13 @@
     <div class="grid">
       <div id="paneFiles">
         <div class="drop-zone" id="dropZone">
-          <p>Soltá tus imágenes acá</p>
-          <span id="fileCount" style="color:var(--muted)">0 archivos cargados</span>
-          <input type="file" id="localFiles" multiple accept="image/png,image/webp" class="hidden" />
+          <p>Arrastrá tus PNGs aquí</p>
+          <span id="fileCount" style="color:var(--muted)">0 archivos listos</span>
+          <input type="file" id="localFiles" multiple accept="image/png,image/webp" style="display:none" />
         </div>
       </div>
 
-      <div id="paneUrls" class="hidden">
+      <div id="paneUrls" style="display:none">
         <textarea id="urls" style="width:100%; height:120px; background:#0d1020; color:#fff; border-radius:10px; padding:10px" placeholder="Links de PNGs..."></textarea>
       </div>
 
@@ -59,21 +58,26 @@
           <div class="c12">
             <label style="display:flex; align-items:center; gap:8px; color:var(--accent); cursor:pointer; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px">
               <input type="checkbox" id="doTrim" checked> 
-              <strong>Auto-Trim (Sin bordes transparentes)</strong>
+              <strong>Auto-Trim (Quitar bordes transparentes)</strong>
             </label>
           </div>
 
-          <div class="c12">
-            <label>Modo de ajuste</label>
+          <div class="c6">
+            <label>Ajuste</label>
             <select id="mode">
-              <option value="contain" selected>Ajustar todo (Contain)</option>
-              <option value="cover">Zoom Llenar (Cover)</option>
+              <option value="contain" selected>Contain (Todo adentro)</option>
+              <option value="cover">Cover (Llenar)</option>
             </select>
           </div>
+
+          <div class="c6">
+            <label>Margen interno (%)</label>
+            <input type="number" id="padding" value="5" min="0" max="40">
+          </div>
           
-          <div class="c12">
-            <button id="go" class="btn">SELECCIONAR CARPETA Y PROCESAR</button>
-            <p class="hint" style="margin-top:8px; text-align:center">Se guardarán los archivos sueltos en la carpeta elegida.</p>
+          <div class="c12" style="margin-top:10px">
+            <button id="go" class="btn">PROCESAR Y GUARDAR</button>
+            <p id="methodHint" class="hint" style="margin-top:8px; text-align:center"></p>
           </div>
         </div>
       </div>
@@ -82,7 +86,7 @@
 
   <div class="card" style="margin-top:16px">
     <progress id="prog" value="0" max="100" style="width:100%"></progress>
-    <div id="log" class="log">Listo para trabajar.</div>
+    <div id="log" class="log">Listo.</div>
   </div>
 </div>
 
@@ -91,16 +95,20 @@
   const $ = id => document.getElementById(id);
   let selectedFiles = [];
 
-  // Navegación básica
-  $('tabFiles').onclick = () => { $('paneFiles').className=''; $('paneUrls').className='hidden'; $('tabFiles').className='active'; $('tabUrls').className=''; };
-  $('tabUrls').onclick = () => { $('paneUrls').className=''; $('paneFiles').className='hidden'; $('tabUrls').className='active'; $('tabFiles').className=''; };
+  // Chequeo de compatibilidad para UX
+  const hasFS = 'showDirectoryPicker' in window;
+  $('methodHint').textContent = hasFS ? "Usando guardado directo en carpeta." : "Tu navegador no soporta carpetas. Se descargarán archivos individuales.";
+
+  // Tabs
+  $('tabFiles').onclick = () => { $('paneFiles').style.display='block'; $('paneUrls').style.display='none'; $('tabFiles').className='active'; $('tabUrls').className=''; };
+  $('tabUrls').onclick = () => { $('paneUrls').style.display='block'; $('paneFiles').style.display='none'; $('tabUrls').className='active'; $('tabFiles').className=''; };
+  
   $('dropZone').onclick = () => $('localFiles').click();
   $('localFiles').onchange = (e) => {
     selectedFiles = Array.from(e.target.files);
-    $('fileCount').textContent = `${selectedFiles.length} archivos listos`;
+    $('fileCount').textContent = `${selectedFiles.length} archivos cargados`;
   };
 
-  // Función de Trim (Detección de bordes)
   function getTrimBounds(img) {
     const canvas = document.createElement('canvas');
     canvas.width = img.width; canvas.height = img.height;
@@ -119,63 +127,65 @@
     return (maxX < minX) ? {x:0,y:0,w:img.width,h:img.height} : {x:minX, y:minY, w:maxX-minX+1, h:maxY-minY+1};
   }
 
-  // --- PROCESO PRINCIPAL CON FILE SYSTEM ACCESS API ---
   $('go').onclick = async () => {
     const tasks = [];
-    if (!$('paneFiles').classList.contains('hidden')) {
+    if (document.getElementById('paneUrls').style.display === 'none') {
       selectedFiles.forEach(f => tasks.push({ source: f, name: f.name.split('.')[0] + ".png", type: 'file' }));
     } else {
       $('urls').value.split('\n').filter(u => u.trim()).forEach((u, i) => tasks.push({ source: u.trim(), name: `img-${i}.png`, type: 'url' }));
     }
 
-    if (!tasks.length) return alert("Primero cargá los archivos, fiera.");
+    if (!tasks.length) return alert("Cargá algo primero.");
 
-    try {
-      // 1. Pedir permiso para la carpeta
-      const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-      
-      $('go').disabled = true;
-      $('log').textContent = "Escribiendo archivos directamente en disco...";
-      const W = parseInt($('w').value), H = parseInt($('h').value);
-      const doTrim = $('doTrim').checked;
-      const mode = $('mode').value;
+    let dirHandle = null;
+    if (hasFS) {
+      try { dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } 
+      catch (e) { return console.warn("Usuario canceló selección de carpeta"); }
+    } else {
+      alert("Tu navegador descargará los archivos uno por uno. Si son muchos, el navegador te pedirá permiso para 'Descargas múltiples'. Dale a Permitir.");
+    }
 
-      for (let i = 0; i < tasks.length; i++) {
-        const t = tasks[i];
-        try {
-          let img = (t.type === 'file') ? await createImageBitmap(t.source) : await createImageBitmap(await (await fetch(t.source)).blob());
-          
-          const canvas = document.createElement('canvas');
-          canvas.width = W; canvas.height = H;
-          const ctx = canvas.getContext('2d');
+    $('go').disabled = true;
+    const W = parseInt($('w').value), H = parseInt($('h').value), padPercent = parseInt($('padding').value) / 100;
+    const innerW = W * (1 - padPercent * 2), innerH = H * (1 - padPercent * 2);
 
-          let src = doTrim ? getTrimBounds(img) : {x:0, y:0, w:img.width, h:img.height};
-          const scale = (mode === 'cover') ? Math.max(W/src.w, H/src.h) : Math.min(W/src.w, H/src.h);
-          const dW = src.w * scale, dH = src.h * scale;
-          
-          ctx.drawImage(img, src.x, src.y, src.w, src.h, (W-dW)/2, (H-dH)/2, dW, dH);
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      try {
+        let img = (t.type === 'file') ? await createImageBitmap(t.source) : await createImageBitmap(await (await fetch(t.source)).blob());
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
 
-          // 2. Guardar archivo individualmente en la carpeta elegida
-          const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        let src = $('doTrim').checked ? getTrimBounds(img) : {x:0, y:0, w:img.width, h:img.height};
+        const scale = ($('mode').value === 'cover') ? Math.max(innerW/src.w, innerH/src.h) : Math.min(innerW/src.w, innerH/src.h);
+        const dW = src.w * scale, dH = src.h * scale;
+        
+        ctx.drawImage(img, src.x, src.y, src.w, src.h, (W-dW)/2, (H-dH)/2, dW, dH);
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+
+        if (dirHandle) {
+          // Opción A: Guardado en carpeta (Chrome/Edge)
           const fileHandle = await dirHandle.getFileHandle(t.name, { create: true });
           const writable = await fileHandle.createWritable();
           await writable.write(blob);
           await writable.close();
-
-          $('log').textContent += `\n✔ Guardado: ${t.name}`;
-        } catch (e) {
-          $('log').textContent += `\n❌ Error en: ${t.name}`;
+        } else {
+          // Opción B: Descarga individual (Firefox/Safari/Inseguro)
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = t.name;
+          a.click();
+          await new Promise(r => setTimeout(r, 200)); // Delay para no trabar el navegador
         }
-        $('prog').value = ((i + 1) / tasks.length) * 100;
+        $('log').textContent = `✔ Procesado ${i+1}/${tasks.length}: ${t.name}`;
+      } catch (e) {
+        $('log').textContent += `\n❌ Error: ${t.name}`;
       }
-      $('log').textContent += `\n\n¡PROCESO COMPLETADO! Revisá tu carpeta.`;
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        alert("Error de permisos: " + err.message);
-      }
-    } finally {
-      $('go').disabled = false;
+      $('prog').value = ((i + 1) / tasks.length) * 100;
     }
+    $('go').disabled = false;
+    $('log').textContent += `\n\n¡LISTO!`;
   };
 })();
 </script>
