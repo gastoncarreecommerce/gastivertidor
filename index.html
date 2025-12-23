@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Gastivertidor de Imágenes para CyberMonday</title>
+<title>Gastivertidor Pro - Transparencia PNG</title>
 <style>
   :root { --bg:#0f1220; --card:#171a2b; --muted:#8c91a5; --text:#e8ecff; --accent:#6ae3ff; }
   *{box-sizing:border-box}
@@ -14,139 +14,77 @@
   .grid{display:grid; gap:14px; grid-template-columns:1fr}
   @media(min-width:900px){.grid{grid-template-columns:1.2fr .8fr}}
   label{font-size:13px; color:var(--muted)}
-  textarea{width:100%; min-height:200px; background:#0d1020; border:1px solid rgba(255,255,255,.08); color:var(--text); border-radius:12px; padding:12px; resize:vertical}
-  input[type="text"],input[type="number"],input[type="url"],select{width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:#0d1020; color:var(--text)}
+  textarea{width:100%; min-height:150px; background:#0d1020; border:1px solid rgba(255,255,255,.08); color:var(--text); border-radius:12px; padding:12px; resize:vertical}
+  input[type="text"],input[type="number"],select{width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:#0d1020; color:var(--text)}
   .row{display:grid; grid-template-columns:repeat(12,1fr); gap:10px}
-  .c12{grid-column:span 12}.c6{grid-column:span 6}.c3{grid-column:span 3}
+  .c12{grid-column:span 12}.c6{grid-column:span 6}
   .seg{display:flex; gap:8px; margin:8px 0 12px}
-  .seg button{border:1px solid rgba(255,255,255,.12); background:#0d1020; color:#8c91a5; border-radius:10px; padding:8px 10px; cursor:pointer}
+  .seg button{border:1px solid rgba(255,255,255,.12); background:#0d1020; color:#8c91a5; border-radius:10px; padding:8px 10px; cursor:pointer; flex:1}
   .seg button.active{background:var(--accent); color:#061018; border-color:transparent; font-weight:700}
-  .btn{appearance:none; border:0; background:var(--accent); color:#061018; padding:12px 14px; border-radius:12px; font-weight:700; cursor:pointer}
+  .btn{appearance:none; border:0; background:var(--accent); color:#061018; padding:12px 14px; border-radius:12px; font-weight:700; cursor:pointer; width:100%}
   .btn.secondary{background:#2a2e42; color:#e8ecff; border:1px solid rgba(255,255,255,.08)}
   .hint{font-size:12px; color:#8c91a5}
-  .log{height:220px; overflow:auto; background:#0d1020; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px; font-family:ui-monospace,Menlo,monospace; font-size:12px}
-  progress{width:100%; height:14px}
-  .pill{display:inline-flex; gap:6px; align-items:center; border:1px solid rgba(255,255,255,.08); background:#0d1020; border-radius:999px; padding:4px 10px; font-size:12px; color:#8c91a5}
-  .status{display:flex; gap:8px; flex-wrap:wrap}
-  .kbd{font-family:ui-monospace,monospace; font-size:12px; background:#0d1020; border:1px solid rgba(255,255,255,.12); padding:2px 6px; border-radius:6px}
+  .log{height:200px; overflow:auto; background:#0d1020; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px; font-family:ui-monospace,monospace; font-size:11px}
+  progress{width:100%; height:10px; border-radius:5px}
+  .drop-zone{border:2px dashed rgba(255,255,255,0.1); border-radius:12px; padding:40px; text-align:center; cursor:pointer; transition:0.2s}
+  .drop-zone:hover{background:rgba(255,255,255,0.03); border-color:var(--accent)}
+  .pill{background:rgba(106, 227, 255, 0.1); color:var(--accent); padding:2px 8px; border-radius:4px; font-size:11px}
   .hidden{display:none}
 </style>
-<!-- Librerías: ZIP y Excel -->
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Gastivertidor de Imágenes → <span class="kbd">500×375</span> <span class="kbd">JPG</span></h1>
-    <p class="hint">Convierte desde URLs o Excel/CSV (columnas <b>URL</b> y <b>SKU</b>), renombra a <b>{SKU}.jpg</b> (dedup), y baja un ZIP. Hasta 200 por tanda.</p>
-
+    <h1>Recortador Masivo <span class="pill">PNG Transparent Support</span></h1>
+    
     <div class="seg" role="tablist">
-      <button id="tabUrls" class="active" type="button">Pegar URLs</button>
-      <button id="tabExcel" type="button">Cargar Excel/CSV</button>
+      <button id="tabFiles" class="active">Subir Archivos</button>
+      <button id="tabUrls">URLs</button>
     </div>
 
     <div class="grid">
-      <!-- Pane URLs -->
-      <div id="paneUrls">
-        <label for="urls">URLs de imágenes (una por línea)</label>
-        <textarea id="urls" placeholder="https://.../img1.webp
-https://.../img2.webp
-..."></textarea>
-        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:8px">
-          <span class="hint">Si el origen bloquea CORS, usá el proxy de abajo.</span>
-          <button id="btnEjemplo" class="btn secondary" type="button">Cargar ejemplo</button>
+      <div id="paneFiles">
+        <div class="drop-zone" id="dropZone">
+          <p>Soltá tus PNGs acá o hacé clic</p>
+          <span id="fileCount" class="hint">0 seleccionados</span>
+          <input type="file" id="localFiles" multiple accept="image/*" class="hidden" />
         </div>
       </div>
 
-      <!-- Pane Excel -->
-      <div id="paneExcel" class="hidden">
-        <div class="row">
-          <div class="c12" style="display:flex; gap:10px; align-items:center">
-            <input id="excelFile" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
-            <button id="btnPickExcel" class="btn secondary" type="button">Cargar Excel/CSV</button>
-            <span id="excelMeta" class="hint"></span>
-          </div>
-
-          <div class="c6">
-            <label>Columna: URL</label>
-            <select id="colUrl"><option value="">(seleccionar)</option></select>
-          </div>
-          <div class="c6">
-            <label>Columna: SKU</label>
-            <select id="colSku"><option value="">(seleccionar)</option></select>
-          </div>
-
-          <div class="c12" style="display:flex; gap:10px; align-items:center">
-            <button id="btnPreviewExcel" class="btn secondary" type="button" disabled>Previsualizar 5 filas</button>
-            <span class="hint">Primer fila = encabezados</span>
-          </div>
-
-          <div class="c12">
-            <div id="excelPreview" class="log hidden"></div>
-          </div>
-          <div class="c12">
-            <label style="display:flex; gap:8px; align-items:center">
-              <input type="checkbox" id="strictSku" checked />
-              Usar exactamente el valor de <b>SKU</b> como nombre base (agrega -2, -3 si se repiten)
-            </label>
-          </div>
-        </div>
+      <div id="paneUrls" class="hidden">
+        <label>URLs (una por línea)</label>
+        <textarea id="urls" placeholder="https://ejemplo.com/imagen.png"></textarea>
       </div>
 
-      <!-- Panel derecho: opciones -->
       <div>
         <div class="row">
           <div class="c6">
-            <label>Tamaño final</label>
-            <div style="display:flex; gap:8px; flex-wrap:wrap">
-              <input type="number" id="w" value="500" min="1" style="width:120px">×
-              <input type="number" id="h" value="375" min="1" style="width:120px">
-              <select id="mode" style="min-width:260px">
-                <option value="contain">Sin recorte (contain – bandas)</option>
-                <option value="cover" selected>Recortar (cover – centrado)</option>
-                <option value="stretch">Estirar (deformar)</option>
-              </select>
-            </div>
+            <label>Ancho (px)</label>
+            <input type="number" id="w" value="500">
           </div>
           <div class="c6">
-            <label>Calidad JPG</label>
-            <div style="display:flex; gap:10px; align-items:center">
-              <input type="range" id="quality" min="60" max="100" value="92" />
-              <span id="qVal" class="kbd">92%</span>
-            </div>
+            <label>Alto (px)</label>
+            <input type="number" id="h" value="375">
           </div>
-
-          <!-- Solo modo URLs -->
           <div class="c6">
-            <label>Prefijo (modo URLs)</label>
-            <input id="prefix" type="text" value="imagen" placeholder="p.ej. producto"/>
+            <label>Ajuste</label>
+            <select id="mode">
+              <option value="cover">Cortar (Cover)</option>
+              <option value="contain" selected>Bandas (Contain)</option>
+              <option value="stretch">Estirar</option>
+            </select>
           </div>
-          <div class="c3">
-            <label>Índice inicial</label>
-            <input id="startIndex" type="number" value="1" min="0" />
+          <div class="c6">
+            <label>Exportar como</label>
+            <select id="format">
+              <option value="image/png">PNG (Transparente)</option>
+              <option value="image/jpeg">JPG (Fondo Blanco)</option>
+            </select>
           </div>
-          <div class="c3">
-            <label>Ceros</label>
-            <input id="pad" type="number" value="3" min="1" />
-          </div>
-          <div class="c12">
-            <label style="display:flex; gap:8px; align-items:center">
-              <input type="checkbox" id="keepBase"> Incluir parte del nombre original (prefijo + base + índice)
-            </label>
-          </div>
-
-          <div class="c12">
-            <label style="display:flex; gap:8px; align-items:center">
-              <input type="checkbox" id="useProxy"> Usar proxy CORS (experimental)
-            </label>
-            <input id="proxy" type="url" placeholder="https://tu-worker.example.com/?url=" />
-            <span class="hint">En sitios HTTPS, imágenes HTTP dan “mixed content”. Intento forzar HTTPS; si falla o no hay CORS, usá proxy.</span>
-          </div>
-
-          <div class="c12" style="margin-top:8px">
-            <button id="go" class="btn">Procesar y crear ZIP</button>
-            <button id="cancel" class="btn secondary" disabled>Cancelar</button>
+          <div class="c12" style="margin-top:10px">
+            <button id="go" class="btn">Procesar y Descargar ZIP</button>
+            <button id="cancel" class="btn secondary" disabled style="margin-top:8px">Cancelar</button>
           </div>
         </div>
       </div>
@@ -154,15 +92,10 @@ https://.../img2.webp
   </div>
 
   <div class="card" style="margin-top:16px">
-    <div class="row">
-      <div class="c12"><label>Progreso</label></div>
-      <div class="c12"><progress id="prog" value="0" max="100"></progress></div>
-      <div id="status" class="c12 status"></div>
-      <div class="c12"><div id="log" class="log" aria-live="polite"></div></div>
-      <div class="c12" style="display:flex; gap:10px; margin-top:10px">
-        <a id="downloadZip" class="btn secondary hidden" download>Descargar ZIP</a>
-        <span id="summary" class="hint"></span>
-      </div>
+    <progress id="prog" value="0" max="100"></progress>
+    <div id="log" class="log" style="margin-top:10px">Esperando archivos...</div>
+    <div style="margin-top:10px">
+        <a id="downloadZip" class="btn hidden" style="text-align:center; text-decoration:none">Descargar ZIP Listo</a>
     </div>
   </div>
 </div>
@@ -170,274 +103,111 @@ https://.../img2.webp
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  // Tabs
-  const tabUrls = $('tabUrls'), tabExcel = $('tabExcel');
-  const paneUrls = $('paneUrls'), paneExcel = $('paneExcel');
-
-  // URL mode
-  const urlsTA = $('urls'), btnEjemplo = $('btnEjemplo');
-
-  // Excel mode
-  const btnPickExcel = $('btnPickExcel'), excelFile = $('excelFile');
-  const excelMeta = $('excelMeta'), colUrl = $('colUrl'), colSku = $('colSku');
-  const btnPreviewExcel = $('btnPreviewExcel'), excelPreview = $('excelPreview'), strictSku = $('strictSku');
-  let excelRows = [];
-
-  // Common controls
-  const wInp = $('w'), hInp = $('h'), mode = $('mode');
-  const qRange = $('quality'), qVal = $('qVal');
-  const prefix = $('prefix'), startIndex = $('startIndex'), pad = $('pad'), keepBase = $('keepBase');
-  const useProxy = $('useProxy'), proxy = $('proxy');
-  const go = $('go'), cancelBtn = $('cancel'), prog = $('prog'), status = $('status');
-  const log = $('log'), download = $('downloadZip'), summary = $('summary');
-
+  const localFiles = $('localFiles'), dropZone = $('dropZone'), fileCount = $('fileCount');
+  const log = $('log'), prog = $('prog'), download = $('downloadZip'), go = $('go');
+  
+  let selectedFiles = [];
   let abort = false;
 
-  // --- UI/Tabs ---
-  function showUrls(){ tabUrls.classList.add('active'); tabExcel.classList.remove('active'); paneUrls.classList.remove('hidden'); paneExcel.classList.add('hidden'); }
-  function showExcel(){ tabExcel.classList.add('active'); tabUrls.classList.remove('active'); paneExcel.classList.remove('hidden'); paneUrls.classList.add('hidden'); }
-  tabUrls.addEventListener('click', showUrls);
-  tabExcel.addEventListener('click', showExcel);
+  // Tabs
+  $('tabFiles').onclick = () => { $('paneFiles').classList.remove('hidden'); $('paneUrls').classList.add('hidden'); $('tabFiles').classList.add('active'); $('tabUrls').classList.remove('active'); };
+  $('tabUrls').onclick = () => { $('paneUrls').classList.remove('hidden'); $('paneFiles').classList.add('hidden'); $('tabUrls').classList.add('active'); $('tabFiles').classList.remove('active'); };
 
-  qRange.addEventListener('input', ()=> qVal.textContent = qRange.value + '%');
-  btnEjemplo.addEventListener('click', ()=>{
-    urlsTA.value = [
-      'https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d',
-      'https://images.unsplash.com/photo-1517336714731-489689fd1ca8',
-      'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e'
-    ].join('\n');
-  });
+  // Selección de archivos
+  dropZone.onclick = () => localFiles.click();
+  localFiles.onchange = (e) => {
+    selectedFiles = Array.from(e.target.files);
+    fileCount.textContent = `${selectedFiles.length} archivos cargados`;
+    log.textContent = `Listos para procesar ${selectedFiles.length} archivos.`;
+  };
 
-  // --- Excel: botón que abre el selector de archivos ---
-  btnPickExcel.addEventListener('click', ()=> excelFile.click());
-
-  // --- Helpers ---
-  function addLog(msg, type='info'){
-    const prefix = type==='ok'?'✅ ':type==='warn'?'⚠️ ':type==='err'?'⛔ ':'';
-    log.textContent += prefix + msg + '\n';
+  function addLog(msg) {
+    log.textContent += `\n> ${msg}`;
     log.scrollTop = log.scrollHeight;
   }
-  function setStatus(done, total, okCount, errCount){
-    prog.max = total || 100; prog.value = done; status.innerHTML = '';
-    [['Procesadas',done],['Éxitos',okCount],['Errores',errCount],['Restantes',Math.max(0,total-done)]]
-      .forEach(([k,v])=>{ const s=document.createElement('span'); s.className='pill'; s.textContent=`${k}: ${v}`; status.appendChild(s); });
-  }
-  function sanitizeBaseName(s){ return String(s||'').trim().replace(/\s+/g,'-').replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'img'; }
-  function sanitizeUrlBase(u){ try{const p=new URL(u); const b=p.pathname.split('/').pop()||'img'; return sanitizeBaseName(b.replace(/\.[^.]+$/,''));}catch{return 'img';} }
-  function zeroPad(n, width){ const s=String(n); return s.length>=width?s:'0'.repeat(width-s.length)+s; }
 
-  function buildUrlModeName(i, base){
-    const idx = zeroPad(i, parseInt(pad.value||'3',10));
-    const pref = (prefix.value||'imagen').trim();
-    const middle = keepBase.checked ? ('-'+(base||'img')) : '';
-    return `${pref}${middle}-${idx}.jpg`;
-  }
-
-  function dedupSkuNamer(){
-    const seen = new Set();
-    return (skuVal)=>{
-      let base = sanitizeBaseName(skuVal)||'sku';
-      let name = base, k=1;
-      while(seen.has(name)){ k++; name = base + '-' + k; }
-      seen.add(name);
-      return name + '.jpg';
-    };
-  }
-
-  async function fetchAsImage(url){
-    // Mixed content: si estamos en https y la URL es http, intento https primero
-    const upgrade = (location.protocol==='https:' && /^http:\/\//i.test(url));
-    const candidates = upgrade ? [url.replace(/^http:\/\//i,'https://'), url] : [url];
-    let lastErr;
-    for(const c of candidates){
-      try{
-        const finalURL = (useProxy.checked && proxy.value) ? (proxy.value + encodeURIComponent(c)) : c;
-        const res = await fetch(finalURL, {mode:'cors', credentials:'omit'});
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        if('createImageBitmap' in window) return await createImageBitmap(blob);
-        // fallback a HTMLImageElement
-        return await new Promise((resolve,reject)=>{
-          const img = new Image();
-          img.onload=()=>resolve(img);
-          img.onerror=()=>reject(new Error('No se pudo cargar la imagen'));
-          img.crossOrigin='anonymous';
-          img.src = URL.createObjectURL(blob);
-        });
-      }catch(e){ lastErr=e; }
-    }
-    throw lastErr || new Error('Failed to fetch');
-  }
-
-  function drawToCanvas(img, tw, th, fitMode='contain', bg='#ffffff'){
-    const canvas = ('OffscreenCanvas' in window) ? new OffscreenCanvas(tw, th) : document.createElement('canvas');
-    canvas.width=tw; canvas.height=th;
+  // Lógica de Canvas con Transparencia
+  function processImage(img, tw, th, fitMode, format) {
+    const canvas = document.createElement('canvas');
+    canvas.width = tw; canvas.height = th;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = bg; ctx.fillRect(0,0,tw,th);
 
-    const sw = img.width || img.bitmapWidth;
-    const sh = img.height || img.bitmapHeight;
-
-    if(fitMode==='cover'){
-      const scale = Math.max(tw/sw, th/sh);
-      const srcW = Math.round(tw/scale), srcH = Math.round(th/scale);
-      const sx = Math.max(0, Math.round((sw - srcW)/2));
-      const sy = Math.max(0, Math.round((sh - srcH)/2));
-      ctx.drawImage(img, sx, sy, srcW, srcH, 0, 0, tw, th);
-    } else if(fitMode==='stretch'){
-      ctx.drawImage(img, 0, 0, tw, th);
-    } else {
-      const scale = Math.min(tw/sw, th/sh);
-      const dw = Math.round(sw*scale), dh = Math.round(sh*scale);
-      const dx = Math.round((tw - dw)/2), dy = Math.round((th - dh)/2);
-      ctx.drawImage(img, 0, 0, sw, sh, dx, dy, dw, dh);
+    // SI ES JPG, pintamos fondo blanco. SI ES PNG, dejamos transparente.
+    if(format === 'image/jpeg') {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0,0,tw,th);
     }
+
+    const sw = img.width, sh = img.height;
+    let dx = 0, dy = 0, dw = tw, dh = th;
+
+    if(fitMode === 'cover'){
+        const scale = Math.max(tw/sw, th/sh);
+        dw = sw * scale; dh = sh * scale;
+        dx = (tw - dw) / 2; dy = (th - dh) / 2;
+    } else if(fitMode === 'contain'){
+        const scale = Math.min(tw/sw, th/sh);
+        dw = sw * scale; dh = sh * scale;
+        dx = (tw - dw) / 2; dy = (th - dh) / 2;
+    }
+
+    ctx.drawImage(img, dx, dy, dw, dh);
     return canvas;
   }
 
-  async function canvasToJpegBlob(canvas, quality){
-    const q = Math.max(0.6, Math.min(1, (quality||92)/100));
-    if(canvas.convertToBlob) return await canvas.convertToBlob({type:'image/jpeg', quality:q});
-    // Fallback
-    return await new Promise((resolve)=>{
-      const dataURL = canvas.toDataURL('image/jpeg', q);
-      const bstr = atob(dataURL.split(',')[1]); const n = bstr.length; const u8 = new Uint8Array(n);
-      for(let i=0;i<n;i++) u8[i]=bstr.charCodeAt(i);
-      resolve(new Blob([u8],{type:'image/jpeg'}));
-    });
-  }
+  go.onclick = async () => {
+    abort = false;
+    const tasks = [];
+    const W = parseInt($('w').value), H = parseInt($('h').value);
+    const mode = $('mode').value;
+    const format = $('format').value;
+    const ext = format === 'image/png' ? '.png' : '.jpg';
 
-  function limitConcurrency(items, limit, worker){
-    let i=0, running=0; const results=[];
-    return new Promise((resolve)=>{
-      const next=()=>{
-        if(abort){ resolve(results); return; }
-        while(running<limit && i<items.length){
-          const idx=i++; running++;
-          worker(items[idx], idx).then(r=>results[idx]=r).catch(e=>results[idx]={error:e}).finally(()=>{ running--; next(); });
-        }
-        if(i>=items.length && running===0) resolve(results);
-      };
-      next();
-    });
-  }
-
-  // --- Excel lectura y previsualización ---
-  function headersFromSheet(sheet){
-    const range = XLSX.utils.decode_range(sheet['!ref']);
-    const firstRow=[];
-    for(let C=range.s.c;C<=range.e.c;++C){
-      const cell = sheet[XLSX.utils.encode_cell({r:range.s.r, c:C})];
-      firstRow.push(cell?String(cell.v):`Col${C+1}`);
-    }
-    return firstRow;
-  }
-  function fillSelect(select, headers){
-    select.innerHTML = '<option value="">(seleccionar)</option>';
-    headers.forEach(h=>{ const o=document.createElement('option'); o.value=h; o.textContent=h; select.appendChild(o); });
-  }
-  function previewRows(rows, urlKey, skuKey){
-    const take = rows.slice(0,5);
-    excelPreview.textContent = take.map((r,i)=>`${i+1}. URL=${r[urlKey]} | SKU=${r[skuKey]}`).join('\n') || '(sin datos)';
-    excelPreview.classList.remove('hidden');
-  }
-
-  excelFile.addEventListener('change', async (e)=>{
-    excelRows=[]; excelPreview.classList.add('hidden'); btnPreviewExcel.disabled=true; excelMeta.textContent='';
-    colUrl.innerHTML='<option value="">(seleccionar)</option>'; colSku.innerHTML='<option value="">(seleccionar)</option>';
-    const file = e.target.files[0]; if(!file) return;
-    try{
-      const ab = await file.arrayBuffer();
-      const wb = XLSX.read(ab, {type:'array'});
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const headers = headersFromSheet(sheet);
-      fillSelect(colUrl, headers); fillSelect(colSku, headers);
-      excelRows = XLSX.utils.sheet_to_json(sheet, {defval:''});
-      excelMeta.textContent = `Filas: ${excelRows.length} | Columnas: ${headers.length}`;
-      btnPreviewExcel.disabled = false;
-      const pick = (needle)=> headers.find(h=>h.toLowerCase().includes(needle));
-      colUrl.value = pick('url') || pick('link') || headers[0] || '';
-      colSku.value = pick('sku') || pick('id') || headers[1] || '';
-    }catch(err){
-      excelMeta.textContent = 'Error leyendo archivo: ' + err.message;
-    }
-  });
-
-  btnPreviewExcel.addEventListener('click', ()=>{
-    if(!excelRows.length) return;
-    const u=colUrl.value, s=colSku.value;
-    if(!u || !s){ excelMeta.textContent='Elegí columnas URL y SKU.'; return; }
-    previewRows(excelRows, u, s);
-  });
-
-  // --- Run principal ---
-  async function run(){
-    abort=false; download.classList.add('hidden'); summary.textContent=''; log.textContent='';
-    const W = parseInt(wInp.value||'500',10), H = parseInt(hInp.value||'375',10), Q = parseInt(qRange.value||'92',10);
-    const max=200;
-    let tasks=[];
-
-    if(!paneExcel.classList.contains('hidden') && excelRows.length){
-      const uKey = colUrl.value, sKey = colSku.value;
-      if(!uKey || !sKey){ addLog('Elegí columnas de URL y SKU para Excel.', 'warn'); return; }
-      const namer = dedupSkuNamer();
-      tasks = excelRows
-        .map(r=>({url:String(r[uKey]||'').trim(), name: namer(strictSku.checked ? r[sKey] : sanitizeBaseName(r[sKey]))}))
-        .filter(x=>x.url);
-      if(!tasks.length){ addLog('No hay URLs válidas en el Excel.', 'warn'); return; }
-      if(tasks.length>max){ addLog(`Se limitarán a ${max} filas (de ${tasks.length}).`, 'warn'); tasks=tasks.slice(0,max); }
-      addLog(`Modo Excel: ${tasks.length} filas → nombres por SKU únicos.`);
+    // Recolectar de Archivos o URLs
+    if (!$('paneFiles').classList.contains('hidden')) {
+        selectedFiles.forEach(f => tasks.push({ source: f, name: f.name.split('.')[0] + ext, type: 'file' }));
     } else {
-      // Modo URLs
-      const lines = urlsTA.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      if(!lines.length){ addLog('Pegá al menos 1 URL.', 'warn'); return; }
-      if(lines.length>max){ addLog(`Se limitarán a ${max} URLs (de ${lines.length}).`, 'warn'); }
-      const start = parseInt(startIndex.value||'1',10);
-      tasks = lines.slice(0,max).map((u,i)=>({ url:u, name: buildUrlModeName(start+i, sanitizeUrlBase(u)) }));
-      addLog(`Modo URLs: ${tasks.length} imágenes.`);
+        $('urls').value.split('\n').filter(l => l.trim()).forEach((u, i) => tasks.push({ source: u.trim(), name: `img-${i}${ext}`, type: 'url' }));
     }
 
-    go.disabled=true; cancelBtn.disabled=false;
-    let done=0, ok=0, err=0; setStatus(0, tasks.length, 0, 0);
+    if(!tasks.length) return alert("Subí archivos o pegá URLs");
+
+    go.disabled = true; $('cancel').disabled = false;
+    log.textContent = "Iniciando proceso...";
     const zip = new JSZip();
 
-    await limitConcurrency(tasks, 8, async (item, idx)=>{
-      if(abort) return;
-      try{
-        addLog(`→ [${idx+1}] Descargando ${item.url}`);
-        const img = await fetchAsImage(item.url);
-        const canvas = drawToCanvas(img, W, H, mode.value, '#ffffff');
-        const blob = await canvasToJpegBlob(canvas, Q);
-        zip.file(item.name, blob);
-        ok++; addLog(`✔ ${item.name}`, 'ok');
-      }catch(e){
-        err++; 
-        if(/Failed to fetch/i.test(String(e.message))){
-          addLog('   Suele ser CORS o http/https mixto. Probá activar proxy o forzar https.', 'warn');
+    for(let i=0; i < tasks.length; i++) {
+        if(abort) break;
+        const t = tasks[i];
+        try {
+            let imgElement;
+            if(t.type === 'file') {
+                imgElement = await createImageBitmap(t.source);
+            } else {
+                const res = await fetch(t.source);
+                const blob = await res.blob();
+                imgElement = await createImageBitmap(blob);
+            }
+
+            const canvas = processImage(imgElement, W, H, mode, format);
+            const blob = await new Promise(res => canvas.toBlob(res, format, 0.92));
+            zip.file(t.name, blob);
+            addLog(`OK: ${t.name}`);
+        } catch(e) {
+            addLog(`ERROR en ${t.name}`);
         }
-        addLog(`✖ Error con ${item.url}: ${e.message}`, 'err');
-      }finally{
-        done++; setStatus(done, tasks.length, ok, err);
-      }
-    });
+        prog.value = ((i+1) / tasks.length) * 100;
+    }
 
-    if(abort){ addLog('Proceso cancelado.', 'warn'); go.disabled=false; cancelBtn.disabled=true; return; }
-
-    addLog('Empaquetando ZIP...');
-    const out = await zip.generateAsync({type:'blob'});
-    const blobURL = URL.createObjectURL(out);
-    download.href = blobURL;
-    const baseName = (!paneExcel.classList.contains('hidden') && excelRows.length) ? 'gastivertidor-sku' : (prefix.value||'gastivertidor');
-    download.download = `${baseName}-${W}x${H}.zip`;
+    const content = await zip.generateAsync({type:"blob"});
+    download.href = URL.createObjectURL(content);
+    download.download = "imagenes_procesadas.zip";
     download.classList.remove('hidden');
-    summary.textContent = `Listo: ${ok} OK, ${err} errores.`;
-    addLog('ZIP listo ✅', 'ok');
+    go.disabled = false; $('cancel').disabled = true;
+    addLog("ZIP Generado con éxito.");
+  };
 
-    go.disabled=false; cancelBtn.disabled=true;
-  }
-
-  go.addEventListener('click', run);
-  cancelBtn.addEventListener('click', ()=>{ abort=true; cancelBtn.disabled=true; });
+  $('cancel').onclick = () => abort = true;
 
 })();
 </script>
