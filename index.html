@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<title>Gastivertidor V5 - VTEX Edition</title>
+<title>Gastivertidor V7 - Smart Balance</title>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   :root { --bg:#0f1220; --card:#171a2b; --muted:#8c91a5; --text:#e8ecff; --accent:#6ae3ff; }
@@ -10,16 +10,16 @@
   body{margin:0; font-family:system-ui,sans-serif; background:linear-gradient(180deg,#0a0d19,#0f1220); color:var(--text)}
   .wrap{max-width:1100px; margin:24px auto; padding:0 16px}
   .card{background:#171a2b; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:20px}
-  h1{font-size:22px; margin:0 0 15px; color: var(--accent); display:flex; align-items:center; gap:10px}
+  h1{font-size:22px; margin:0 0- 10px; color: var(--accent); display:flex; align-items:center; gap:10px}
   .grid{display:grid; gap:20px; grid-template-columns:1fr}
   @media(min-width:900px){.grid{grid-template-columns:1.2fr .8fr}}
   label{font-size:11px; color:var(--muted); display:block; margin-bottom:5px; text-transform: uppercase; font-weight: 700}
-  input, select, textarea{width:100%; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,.1); background:#0d1020; color:var(--text); font-size: 14px}
+  input, select, textarea{width:100%; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,.1); background:#0d1020; color:var(--text)}
   .row{display:grid; grid-template-columns:repeat(12,1fr); gap:12px}
   .c6{grid-column:span 6} .c12{grid-column:span 12}
   .seg{display:flex; gap:10px; margin-bottom:15px}
-  .seg button{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,0.03); color:#8c91a5; border-radius:12px; padding:12px; cursor:pointer; flex:1; font-weight: 600}
-  .seg button.active{background:var(--accent); color:#061018; border-color:transparent}
+  .seg button{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,0.03); color:#8c91a5; border-radius:12px; padding:12px; cursor:pointer; flex:1}
+  .seg button.active{background:var(--accent); color:#061018; font-weight:700}
   .btn{appearance:none; border:0; background:var(--accent); color:#061018; padding:16px; border-radius:12px; font-weight:800; cursor:pointer; width:100%; text-transform: uppercase}
   .log{height:150px; overflow:auto; background:#0d1020; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; font-family: monospace; font-size:11px; margin-top:15px}
   .drop-zone{border:2px dashed rgba(106, 227, 255, 0.2); border-radius:16px; padding:50px 20px; text-align:center; cursor:pointer}
@@ -30,27 +30,27 @@
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Gasti-vertidor <span class="pill">Ahora adaptado para catalogación</span></h1>
+    <h1>Gastivertidor <span class="pill">V7 SMART BALANCE</span></h1>
     
     <div class="seg">
-      <button id="tabFiles" class="active">Subir Imágenes</button>
-      <button id="tabUrls">Desde URLs</button>
+      <button id="tabFiles" class="active">Archivos</button>
+      <button id="tabUrls">URLs</button>
     </div>
 
     <div class="grid">
       <div id="paneFiles">
         <div class="drop-zone" id="dropZone">
-          <p>PNG o JPG (Fondo Blanco o Transparente)</p>
+          <p>Subí tus fotos de producto aquí</p>
           <span id="fileCount" class="pill">0 ARCHIVOS</span>
           <input type="file" id="localFiles" multiple accept="image/*" style="display:none" />
         </div>
       </div>
 
       <div id="paneUrls" style="display:none">
-        <textarea id="urls" style="height:110px; margin-bottom:10px" placeholder="https://carrefourar.vteximg.com.br/arquivos/ids/683886/7791813828419_E01.jpg"></textarea>
+        <textarea id="urls" style="height:110px; margin-bottom:10px" placeholder="URLs..."></textarea>
         <div class="opt-box">
           <label style="display:flex; align-items:center; gap:8px; color:var(--accent); cursor:pointer">
-            <input type="checkbox" id="vtexNaming" checked> <strong>Renombrar usando patrón VTEX (/ids/...)</strong>
+            <input type="checkbox" id="vtexNaming" checked> <strong>Naming VTEX automático</strong>
           </label>
         </div>
       </div>
@@ -63,33 +63,25 @@
           <div class="c12">
             <div class="opt-box">
               <label style="display:flex; align-items:center; gap:8px; color:var(--accent); cursor:pointer">
-                <input type="checkbox" id="doTrim" checked> <strong>Auto-Trim Inteligente</strong>
+                <input type="checkbox" id="smartBalance" checked> 
+                <strong>Smart Balance (Auto-Centrado Óptico)</strong>
               </label>
+              <p style="font-size:10px; color:var(--muted); margin:5px 0 0 25px">Detecta el peso visual para que los tags laterales no desvíen el producto.</p>
             </div>
           </div>
 
           <div class="c6">
             <label>Alineación Vertical</label>
             <select id="vAlign">
-              <option value="center">Centrado (PDP)</option>
-              <option value="bottom" selected>Abajo (PLP / Grilla)</option>
-              <option value="top">Arriba</option>
+              <option value="center">Centro</option>
+              <option value="bottom" selected>Abajo (Grilla)</option>
             </select>
           </div>
 
-          <div class="c6"><label>Padding (%)</label><input type="number" id="padding" value="0"></div>
+          <div class="c6"><label>Padding (%)</label><input type="number" id="padding" value="2"></div>
           
           <div class="c12">
-            <label>Método de Exportación</label>
-            <select id="exportMode">
-              <option value="zip">Empaquetar todo (.ZIP)</option>
-              <option value="individual">Individual (Descargas 1x1)</option>
-              <option value="folder">Guardar en Carpeta (Chrome/Edge)</option>
-            </select>
-          </div>
-          
-          <div class="c12" style="margin-top:10px">
-            <button id="go" class="btn">PROCESAR IMÁGENES</button>
+            <button id="go" class="btn">PROCESAR LOTE</button>
           </div>
         </div>
       </div>
@@ -98,7 +90,7 @@
 
   <div class="card" style="margin-top:20px">
     <progress id="prog" value="0" max="100" style="width:100%"></progress>
-    <div id="log" class="log">Listo.</div>
+    <div id="log" class="log">Esperando lote...</div>
     <a id="zipDownload" class="btn" style="display:none; margin-top:10px; text-decoration:none; text-align:center">DESCARGAR ZIP</a>
   </div>
 </div>
@@ -108,28 +100,38 @@
   const $ = id => document.getElementById(id);
   let selectedFiles = [];
 
-  const hasFS = (typeof window.showDirectoryPicker === 'function');
-  if(!hasFS) $("exportMode").options[2].disabled = true;
-
   $('tabFiles').onclick = () => { $('paneFiles').style.display='block'; $('paneUrls').style.display='none'; $('tabFiles').className='active'; $('tabUrls').className=''; };
   $('tabUrls').onclick = () => { $('paneUrls').style.display='block'; $('paneFiles').style.display='none'; $('tabUrls').className='active'; $('tabFiles').className=''; };
   $('dropZone').onclick = () => $('localFiles').click();
   $('localFiles').onchange = (e) => { selectedFiles = Array.from(e.target.files); $('fileCount').textContent = `${selectedFiles.length} ARCHIVOS`; };
 
-  function getTrimBounds(img) {
+  function getSmartBounds(img) {
     const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
     const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    
     let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+    let sumX = 0, sumY = 0, count = 0;
+
     for (let y = 0; y < canvas.height; y++) {
       for (let x = 0; x < canvas.width; x++) {
         const i = (y * canvas.width + x) * 4;
-        if (data[i+3] > 10 && (data[i] < 252 || data[i+1] < 252 || data[i+2] < 252)) {
-          if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+        // Píxel es contenido si no es blanco y no es transparente
+        if (data[i+3] > 10 && (data[i] < 250 || data[i+1] < 250 || data[i+2] < 250)) {
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+          sumX += x; sumY += y; count++;
         }
       }
     }
-    return (maxX < minX) ? {x:0, y:0, w:img.width, h:img.height} : {x:minX, y:minY, w:maxX-minX+1, h:maxY-minY+1};
+    
+    if (count === 0) return {x:0, y:0, w:img.width, h:img.height, cx: img.width/2, cy: img.height/2};
+
+    return {
+      x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1,
+      cx: sumX / count, // Centro de masa X
+      cy: sumY / count  // Centro de masa Y
+    };
   }
 
   $('go').onclick = async () => {
@@ -148,15 +150,10 @@
       });
     }
 
-    if (!tasks.length) return alert("Subí algo primero");
-
-    const mode = $('exportMode').value;
-    let dirHandle = null, zip = null;
-    if (mode === 'folder') { try { dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch(e) { return; } }
-    else if (mode === 'zip') { zip = new JSZip(); }
-
+    if (!tasks.length) return;
     $('go').disabled = true; $('zipDownload').style.display = 'none';
-    const W = parseInt($('w').value), H = parseInt($('h').value), vAlign = $('vAlign').value, pad = parseInt($('padding').value)/100;
+    const zip = new JSZip();
+    const W = parseInt($('w').value), H = parseInt($('h').value), pad = parseInt($('padding').value)/100;
 
     for (let i = 0; i < tasks.length; i++) {
       try {
@@ -166,38 +163,42 @@
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,W,H);
 
-        const src = $('doTrim').checked ? getTrimBounds(img) : {x:0, y:0, w:img.width, h:img.height};
+        const info = getSmartBounds(img);
         const sW = W * (1 - pad*2), sH = H * (1 - pad*2);
-        const scale = Math.min(sW/src.w, sH/src.h);
-        const dW = src.w * scale, dH = src.h * scale;
-        const dX = (W - dW) / 2;
-        let dY = (H - dH) / 2;
-        if (vAlign === 'bottom') dY = (H - (H*pad)) - dH;
-        if (vAlign === 'top') dY = H*pad;
-
-        ctx.drawImage(img, src.x, src.y, src.w, src.h, dX, dY, dW, dH);
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-
-        if (mode === 'folder') {
-          const fh = await dirHandle.getFileHandle(t.name + ".jpg", { create: true });
-          const wr = await fh.createWritable(); await wr.write(blob); await wr.close();
-        } else if (mode === 'zip') { zip.file(t.name + ".jpg", blob); }
-        else {
-          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = t.name + ".jpg"; a.click();
-          await new Promise(r => setTimeout(r, 200));
+        const scale = Math.min(sW/info.w, sH/info.h);
+        
+        const dW = info.w * scale, dH = info.h * scale;
+        
+        // CÁLCULO DE POSICIÓN CON SMART BALANCE
+        let dX, dY;
+        
+        if ($('smartBalance').checked) {
+            // Centramos basándonos en el Centro de Masa relativo al bounding box
+            const massRelativeX = (info.cx - info.x) * scale;
+            dX = (W / 2) - massRelativeX;
+        } else {
+            dX = (W - dW) / 2;
         }
-        $('log').textContent = `[${i+1}/${tasks.length}] ✔ ${t.name}.jpg`;
-      } catch (e) { $('log').textContent += `\n❌ Error en ${tasks[i].name}`; }
+
+        if ($('vAlign').value === 'bottom') {
+            dY = (H - (H*pad)) - dH;
+        } else {
+            dY = (H - dH) / 2;
+        }
+
+        ctx.drawImage(img, info.x, info.y, info.w, info.h, dX, dY, dW, dH);
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+        zip.file(t.name + ".jpg", blob);
+        $('log').textContent = `✔ [${i+1}/${tasks.length}] ${t.name}.jpg`;
+      } catch (e) { console.error(e); }
       $('prog').value = ((i+1)/tasks.length)*100;
     }
 
-    if (mode === 'zip') {
-      const content = await zip.generateAsync({type:"blob"});
-      $('zipDownload').href = URL.createObjectURL(content);
-      $('zipDownload').download = "gastivertidor_pack.zip";
-      $('zipDownload').style.display = 'block';
-    }
-    $('go').disabled = false; $('log').textContent += `\n\nPROCESO FINALIZADO.`;
+    const content = await zip.generateAsync({type:"blob"});
+    $('zipDownload').href = URL.createObjectURL(content);
+    $('zipDownload').download = "pack_ecommerce.zip";
+    $('zipDownload').style.display = 'block';
+    $('go').disabled = false;
   };
 })();
 </script>
