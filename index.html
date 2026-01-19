@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<title>Gastivertidor V4 - Flexible Export</title>
+<title>Gastivertidor V5 - VTEX Edition</title>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   :root { --bg:#0f1220; --card:#171a2b; --muted:#8c91a5; --text:#e8ecff; --accent:#6ae3ff; }
@@ -21,7 +21,6 @@
   .seg button{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,0.03); color:#8c91a5; border-radius:12px; padding:12px; cursor:pointer; flex:1; font-weight: 600}
   .seg button.active{background:var(--accent); color:#061018; border-color:transparent}
   .btn{appearance:none; border:0; background:var(--accent); color:#061018; padding:16px; border-radius:12px; font-weight:800; cursor:pointer; width:100%; text-transform: uppercase}
-  .btn:disabled{opacity:0.4}
   .log{height:150px; overflow:auto; background:#0d1020; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; font-family: monospace; font-size:11px; margin-top:15px}
   .drop-zone{border:2px dashed rgba(106, 227, 255, 0.2); border-radius:16px; padding:50px 20px; text-align:center; cursor:pointer}
   .pill{background:rgba(106, 227, 255, 0.1); color:var(--accent); padding:4px 10px; border-radius:6px; font-size:11px}
@@ -31,7 +30,7 @@
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Gasti-vertidor <span class="pill">V4 FLEX</span></h1>
+    <h1>Gastivertidor <span class="pill">V5 VTEX</span></h1>
     
     <div class="seg">
       <button id="tabFiles" class="active">Subir Imágenes</button>
@@ -41,14 +40,19 @@
     <div class="grid">
       <div id="paneFiles">
         <div class="drop-zone" id="dropZone">
-          <p>PNG o JPG (Transparente o Fondo Blanco)</p>
+          <p>PNG o JPG (Fondo Blanco o Transparente)</p>
           <span id="fileCount" class="pill">0 ARCHIVOS</span>
           <input type="file" id="localFiles" multiple accept="image/*" style="display:none" />
         </div>
       </div>
 
       <div id="paneUrls" style="display:none">
-        <textarea id="urls" style="height:140px" placeholder="https://..."></textarea>
+        <textarea id="urls" style="height:110px; margin-bottom:10px" placeholder="https://carrefourar.vteximg.com.br/arquivos/ids/683886/7791813828419_E01.jpg"></textarea>
+        <div class="opt-box">
+          <label style="display:flex; align-items:center; gap:8px; color:var(--accent); cursor:pointer">
+            <input type="checkbox" id="vtexNaming" checked> <strong>Renombrar usando patrón VTEX (/ids/...)</strong>
+          </label>
+        </div>
       </div>
 
       <div>
@@ -73,23 +77,19 @@
             </select>
           </div>
 
-          <div class="c6">
-            <label>Padding / Margen (%)</label>
-            <input type="number" id="padding" value="0">
-          </div>
+          <div class="c6"><label>Padding (%)</label><input type="number" id="padding" value="0"></div>
           
           <div class="c12">
             <label>Método de Exportación</label>
             <select id="exportMode">
-              <option value="individual">Individual (1 por 1)</option>
               <option value="zip">Empaquetar todo (.ZIP)</option>
+              <option value="individual">Individual (Descargas 1x1)</option>
               <option value="folder">Guardar en Carpeta (Chrome/Edge)</option>
             </select>
           </div>
           
           <div class="c12" style="margin-top:10px">
-            <button id="go" class="btn">PROCESAR Y DESCARGAR</button>
-            <p id="methodHint" style="font-size:10px; color:var(--muted); text-align:center; margin-top:8px"></p>
+            <button id="go" class="btn">PROCESAR IMÁGENES</button>
           </div>
         </div>
       </div>
@@ -99,7 +99,7 @@
   <div class="card" style="margin-top:20px">
     <progress id="prog" value="0" max="100" style="width:100%"></progress>
     <div id="log" class="log">Listo.</div>
-    <a id="zipDownload" class="btn" style="display:none; margin-top:10px; text-decoration:none; text-align:center">DESCARGAR ZIP LISTO</a>
+    <a id="zipDownload" class="btn" style="display:none; margin-top:10px; text-decoration:none; text-align:center">DESCARGAR ZIP</a>
   </div>
 </div>
 
@@ -114,24 +114,18 @@
   $('tabFiles').onclick = () => { $('paneFiles').style.display='block'; $('paneUrls').style.display='none'; $('tabFiles').className='active'; $('tabUrls').className=''; };
   $('tabUrls').onclick = () => { $('paneUrls').style.display='block'; $('paneFiles').style.display='none'; $('tabUrls').className='active'; $('tabFiles').className=''; };
   $('dropZone').onclick = () => $('localFiles').click();
-  $('localFiles').onchange = (e) => {
-    selectedFiles = Array.from(e.target.files);
-    $('fileCount').textContent = `${selectedFiles.length} ARCHIVOS`;
-  };
+  $('localFiles').onchange = (e) => { selectedFiles = Array.from(e.target.files); $('fileCount').textContent = `${selectedFiles.length} ARCHIVOS`; };
 
   function getTrimBounds(img) {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width; canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
+    const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
+    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
     for (let y = 0; y < canvas.height; y++) {
       for (let x = 0; x < canvas.width; x++) {
         const i = (y * canvas.width + x) * 4;
         if (data[i+3] > 10 && (data[i] < 252 || data[i+1] < 252 || data[i+2] < 252)) {
-          if (x < minX) minX = x; if (x > maxX) maxX = x;
-          if (y < minY) minY = y; if (y > maxY) maxY = y;
+          if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
         }
       }
     }
@@ -143,34 +137,33 @@
     if ($('paneUrls').style.display === 'none') {
       selectedFiles.forEach(f => tasks.push({ source: f, name: f.name.split('.')[0], type: 'file' }));
     } else {
-      $('urls').value.split('\n').filter(u => u.trim()).forEach((u, i) => tasks.push({ source: u.trim(), name: `img-${i+1}`, type: 'url' }));
+      const vtexActive = $('vtexNaming').checked;
+      $('urls').value.split('\n').filter(u => u.trim()).forEach((u, i) => {
+        let name = `img-${i+1}`;
+        if (vtexActive && u.includes('/ids/')) {
+            const parts = u.split('/ids/');
+            if (parts[1]) name = parts[1].split('?')[0].replace(/\//g, '-').replace(/\.[^/.]+$/, "");
+        }
+        tasks.push({ source: u.trim(), name: name, type: 'url' });
+      });
     }
 
     if (!tasks.length) return alert("Subí algo primero");
 
     const mode = $('exportMode').value;
-    let dirHandle = null;
-    let zip = null;
+    let dirHandle = null, zip = null;
+    if (mode === 'folder') { try { dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch(e) { return; } }
+    else if (mode === 'zip') { zip = new JSZip(); }
 
-    if (mode === 'folder') {
-      try { dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch(e) { return; }
-    } else if (mode === 'zip') {
-      zip = new JSZip();
-    }
-
-    $('go').disabled = true;
-    $('zipDownload').style.display = 'none';
+    $('go').disabled = true; $('zipDownload').style.display = 'none';
     const W = parseInt($('w').value), H = parseInt($('h').value), vAlign = $('vAlign').value, pad = parseInt($('padding').value)/100;
 
     for (let i = 0; i < tasks.length; i++) {
       try {
         const t = tasks[i];
         const img = (t.type === 'file') ? await createImageBitmap(t.source) : await createImageBitmap(await (await fetch(t.source)).blob());
-        const canvas = document.createElement('canvas');
-        canvas.width = W; canvas.height = H;
+        const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
-        
-        // Fondo blanco default
         ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,W,H);
 
         const src = $('doTrim').checked ? getTrimBounds(img) : {x:0, y:0, w:img.width, h:img.height};
@@ -188,9 +181,8 @@
         if (mode === 'folder') {
           const fh = await dirHandle.getFileHandle(t.name + ".jpg", { create: true });
           const wr = await fh.createWritable(); await wr.write(blob); await wr.close();
-        } else if (mode === 'zip') {
-          zip.file(t.name + ".jpg", blob);
-        } else {
+        } else if (mode === 'zip') { zip.file(t.name + ".jpg", blob); }
+        else {
           const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = t.name + ".jpg"; a.click();
           await new Promise(r => setTimeout(r, 200));
         }
@@ -205,9 +197,7 @@
       $('zipDownload').download = "gastivertidor_pack.zip";
       $('zipDownload').style.display = 'block';
     }
-
-    $('go').disabled = false;
-    $('log').textContent += `\n\nPROCESO FINALIZADO.`;
+    $('go').disabled = false; $('log').textContent += `\n\nPROCESO FINALIZADO.`;
   };
 })();
 </script>
