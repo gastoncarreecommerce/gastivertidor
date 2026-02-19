@@ -195,7 +195,10 @@
         let name = `img-${i+1}`;
         if (vtexActive && u.includes('/ids/')) {
             const parts = u.split('/ids/');
-            if (parts[1]) name = parts[1].split('?')[0].replace(/\//g, '-').replace(/\.[^/.]+$/, "");
+            if (parts[1]) {
+                const cleanPath = parts[1].split('?')[0];
+                name = cleanPath.substring(cleanPath.lastIndexOf('/') + 1).replace(/\.[^/.]+$/, "");
+            }
         }
         tasks.push({ source: u.trim(), name: name, type: 'url' });
       });
